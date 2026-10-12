@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบติดตามงานติดตั้งระบบไฟฟ้าโครงการ Fabrinet New warehouse ปทุมธานี</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font: Prompt & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Prompt', 'Inter', sans-serif;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-amber-500 p-2 rounded-xl text-slate-950 shadow-inner">
+                    <i data-lucide="zap" class="w-6 h-6 stroke-[2.5]"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold tracking-tight">ระบบติดตามงานติดตั้งระบบไฟฟ้าโครงการ Fabrinet New warehouse ปทุมธานี</h1>
+                    <div class="flex items-center space-x-2">
+                        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <p class="text-xs text-slate-400">ฐานข้อมูลท้องถิ่น IndexedDB ในเครื่องนี้</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <!-- Data Backup / Export -->
+                <button onclick="exportJSONData()" title="สำรองข้อมูล (Export JSON)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition border border-slate-700 flex items-center space-x-1.5">
+                    <i data-lucide="download" class="w-4 h-4 text-sky-400"></i>
+                    <span class="hidden md:inline">Export JSON</span>
+                </button>
+
+                <!-- Data Restore / Import -->
+                <label title="นำเข้าข้อมูล (Import JSON)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition border border-slate-700 flex items-center space-x-1.5 cursor-pointer">
+                    <i data-lucide="upload" class="w-4 h-4 text-emerald-400"></i>
+                    <span class="hidden md:inline">Import JSON</span>
+                    <input type="file" id="import-json-file" accept=".json" onchange="importJSONData(event)" class="hidden">
+                </label>
+
+                <!-- Add New Task Button -->
+                <button onclick="openAddTaskModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold px-4 py-2 rounded-xl text-sm transition shadow-sm flex items-center space-x-2">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span>เพิ่มงานใหม่</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Notification Toast -->
+        <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 border border-slate-700 pointer-events-none">
+            <div id="toast-icon"></div>
+            <span id="toast-message" class="text-sm font-medium">ทำรายการสำเร็จ</span>
+        </div>
+
+        <!-- Custom Delete Modal -->
+        <div id="delete-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-6 text-center space-y-4 border border-slate-200">
+                <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto">
+                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                </div>
+                <h3 class="font-bold text-lg text-slate-900">ยืนยันการลบรายการ</h3>
+                <p class="text-sm text-slate-500">ข้อมูลจะถูกลบออกจากฐานข้อมูล IndexedDB ในคอมพิวเตอร์เครื่องนี้อย่างถาวร</p>
+                <div class="flex space-x-3 pt-2">
+                    <button onclick="closeDeleteModal()" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-medium transition">ยกเลิก</button>
+                    <button id="confirm-delete-btn" class="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-semibold transition shadow-sm">ลบรายการ</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Summary Indicator Cards (ปรับเหลือ 5 คอลัมน์โดยเอา "คนงานรวม" ออก) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <!-- Total Tasks -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">งานทั้งหมด</p>
+                    <h3 id="stat-total" class="text-2xl font-bold text-slate-900 mt-1">0</h3>
+                </div>
+                <div class="bg-blue-50 text-blue-600 p-3 rounded-xl">
+                    <i data-lucide="layers" class="w-6 h-6"></i>
+                </div>
+            </div>
+            <!-- Completed -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">เสร็จสิ้น</p>
+                    <h3 id="stat-completed" class="text-2xl font-bold text-emerald-600 mt-1">0</h3>
+                </div>
+                <div class="bg-emerald-50 text-emerald-600 p-3 rounded-xl">
+                    <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                </div>
+            </div>
+            <!-- In Progress -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">กำลังทำ</p>
+                    <h3 id="stat-progress" class="text-2xl font-bold text-sky-600 mt-1">0</h3>
+                </div>
+                <div class="bg-sky-50 text-sky-600 p-3 rounded-xl">
+                    <i data-lucide="loader-2" class="w-6 h-6"></i>
+                </div>
+            </div>
+            <!-- Pending / Inspection -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">รอตรวจ/รอเริ่ม</p>
+                    <h3 id="stat-pending" class="text-2xl font-bold text-amber-600 mt-1">0</h3>
+                </div>
+                <div class="bg-amber-50 text-amber-600 p-3 rounded-xl">
+                    <i data-lucide="clock" class="w-6 h-6"></i>
+                </div>
+            </div>
+            <!-- Delayed -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">ล่าช้า</p>
+                    <h3 id="stat-delayed" class="text-2xl font-bold text-rose-600 mt-1">0</h3>
+                </div>
+                <div class="bg-rose-50 text-rose-600 p-3 rounded-xl">
+                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900">ความคืบหน้าภาพรวมโครงการ (Overall Installation Progress)</h2>
+                    <p class="text-xs text-slate-500">คำนวณจากเปอร์เซ็นต์ความคืบหน้าของงานไฟฟ้าทั้งหมดในฐานข้อมูลเครื่องนี้</p>
+                </div>
+                <span id="overall-percentage-text" class="text-2xl font-extrabold text-blue-600">0%</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-4 overflow-hidden p-0.5 border border-slate-200">
+                <div id="overall-progress-bar" class="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 space-y-3">
+            <div class="flex flex-col md:flex-row gap-3 items-center justify-between">
+                <!-- Search Input -->
+                <div class="w-full md:w-64 relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                    </span>
+                    <input type="text" id="search-input" oninput="filterTasks()" placeholder="ค้นชื่องาน, หัวหน้าช่าง, Staff..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                </div>
+
+                <!-- Filters -->
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 w-full md:w-auto">
+                    <!-- Zone Filter -->
+                    <select id="filter-zone" onchange="filterTasks()" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">ทุกโซน/ชั้น</option>
+                    </select>
+
+                    <!-- Category Filter -->
+                    <select id="filter-category" onchange="filterTasks()" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">ทุกหมวดหมู่ระบบ</option>
+                        <option value="High Voltage System">High Voltage System</option>
+                        <option value="MDB & Main Distribution">MDB & Main Distribution</option>
+                        <option value="Sub-main & Feeder">Sub-main & Feeder</option>
+                        <option value="Cable Pulling & Termination">Cable Pulling & Termination</option>
+                        <option value="Lighting System">Lighting System</option>
+                        <option value="Receptacle System">Receptacle System</option>
+                        <option value="Earthing & Lightning Protection">Earthing & Lightning Protection</option>
+                        <option value="Fire Alarm System">Fire Alarm System</option>
+                        <option value="Emergency Light and Exit Sign Light System">Emergency Light and Exit Sign Light System</option>
+                        <option value="Public Address System">Public Address System</option>
+                        <option value="CCTV System">CCTV System</option>
+                        <option value="BAS System">BAS System</option>
+                        <option value="Power For Air Conditioner System">Power For Air Conditioner System</option>
+                    </select>
+
+                    <!-- Foreman Filter -->
+                    <select id="filter-foreman" onchange="filterTasks()" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">ทุกหัวหน้าช่าง</option>
+                    </select>
+
+                    <!-- Staff Filter -->
+                    <select id="filter-staff" onchange="filterTasks()" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">ทุก Staff ผู้ดูแล</option>
+                    </select>
+
+                    <!-- Status Filter -->
+                    <select id="filter-status" onchange="filterTasks()" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">ทุกสถานะ</option>
+                        <option value="รอเริ่มงาน">รอเริ่มงาน</option>
+                        <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
+                        <option value="ส่งตรวจงาน">ส่งตรวจงาน</option>
+                        <option value="เสร็จสิ้น">เสร็จสิ้น</option>
+                        <option value="ล่าช้า">ล่าช้า</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                <span id="task-count-badge" class="text-slate-500 font-medium">แสดง 0 รายการ</span>
+                <button onclick="clearFilters()" class="text-slate-500 hover:text-slate-800 underline">
+                    ล้างตัวกรองทั้งหมด
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+                <h3 class="font-bold text-slate-800 flex items-center space-x-2">
+                    <i data-lucide="list-todo" class="w-5 h-5 text-blue-600"></i>
+                    <span>รายการงานติดตั้งระบบไฟฟ้า</span>
+                </h3>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-200">
+                            <th class="py-3.5 px-4 font-semibold">รายการงาน / หมวดหมู่</th>
+                            <th class="py-3.5 px-4 font-semibold">โซน / ชั้น</th>
+                            <th class="py-3.5 px-4 font-semibold">หัวหน้าช่าง, คนงาน & Staff</th>
+                            <th class="py-3.5 px-4 font-semibold">ความคืบหน้า (%)</th>
+                            <th class="py-3.5 px-4 font-semibold">สถานะ</th>
+                            <th class="py-3.5 px-4 font-semibold">กำหนดเสร็จ</th>
+                            <th class="py-3.5 px-4 font-semibold text-right">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="task-table-body" class="divide-y divide-slate-200 text-sm">
+                        <!-- Dynamic JavaScript rendering -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State Container -->
+            <div id="empty-state" class="py-20 px-4 text-center">
+                <div class="w-20 h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-200 shadow-sm">
+                    <i data-lucide="database-zap" class="w-10 h-10"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 mb-1">ยังไม่มีรายการงานติดตั้งไฟฟ้าในระบบ</h3>
+                <p class="text-sm text-slate-500 max-w-md mx-auto mb-6">ฐานข้อมูล IndexedDB ในคอมพิวเตอร์เครื่องนี้ยังไม่มีรายการงาน เริ่มต้นบันทึกงานโดยกดปุ่ม "เพิ่มงานใหม่" ด้านบน</p>
+                <div class="flex flex-wrap items-center justify-center gap-3">
+                    <button onclick="openAddTaskModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold px-5 py-2.5 rounded-xl text-sm transition shadow-sm flex items-center space-x-2">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>เริ่มเพิ่มงานติดตั้งรายการแรก</span>
+                    </button>
+                    <label class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium px-4 py-2.5 rounded-xl text-sm transition shadow-sm flex items-center space-x-2 cursor-pointer">
+                        <i data-lucide="upload" class="w-4 h-4 text-emerald-600"></i>
+                        <span>นำเข้าไฟล์สำรอง (.json)</span>
+                        <input type="file" accept=".json" onchange="importJSONData(event)" class="hidden">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="task-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full mx-4 overflow-hidden border border-slate-200 transform transition-all max-h-[90vh] flex flex-col">
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
+                <h3 id="modal-title" class="font-bold text-lg">เพิ่มรายการงานติดตั้งใหม่</h3>
+                <button onclick="closeTaskModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <form id="task-form" onsubmit="handleTaskSubmit(event)" class="p-6 space-y-4 overflow-y-auto flex-grow">
+                <input type="hidden" id="task-id">
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">ชื่องาน / รายละเอียดงานไฟฟ้า <span class="text-rose-500">*</span></label>
+                    <input type="text" id="task-name" required placeholder="เช่น เดินท่อร้อยสายไฟ EMT ชั้น 2 โซน A" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">หมวดหมู่งานไฟฟ้า <span class="text-rose-500">*</span></label>
+                        <select id="task-category" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">เลือกหมวดหมู่ระบบ</option>
+                            <option value="High Voltage System">High Voltage System</option>
+                            <option value="MDB & Main Distribution">MDB & Main Distribution</option>
+                            <option value="Sub-main & Feeder">Sub-main & Feeder</option>
+                            <option value="Cable Pulling & Termination">Cable Pulling & Termination</option>
+                            <option value="Lighting System">Lighting System</option>
+                            <option value="Receptacle System">Receptacle System</option>
+                            <option value="Earthing & Lightning Protection">Earthing & Lightning Protection</option>
+                            <option value="Fire Alarm System">Fire Alarm System</option>
+                            <option value="Emergency Light and Exit Sign Light System">Emergency Light and Exit Sign Light System</option>
+                            <option value="Public Address System">Public Address System</option>
+                            <option value="CCTV System">CCTV System</option>
+                            <option value="BAS System">BAS System</option>
+                            <option value="Power For Air Conditioner System">Power For Air Conditioner System</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">โซน / ชั้น <span class="text-rose-500">*</span></label>
+                        <input type="text" id="task-zone" required placeholder="เช่น ชั้น 1, ห้อง MDB, อาคาร B" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">ชื่อหัวหน้าช่าง (Foreman) <span class="text-rose-500">*</span></label>
+                        <input type="text" id="task-foreman" required placeholder="เช่น ช่างสมชาย ใจดี" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">จำนวนคนงาน (คน) <span class="text-rose-500">*</span></label>
+                        <input type="number" id="task-workers" required min="1" max="100" value="3" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">ชื่อ Staff ที่ดูแลงาน (Engineer / Supervisor) <span class="text-rose-500">*</span></label>
+                    <input type="text" id="task-staff" required placeholder="เช่น วส. ภัทร (วิศวกรไฟฟ้าประจำโซน)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">วันที่เริ่มงาน</label>
+                        <input type="date" id="task-startdate" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">วันกำหนดเสร็จ (Due Date)</label>
+                        <input type="date" id="task-duedate" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">สถานะงาน</label>
+                        <select id="task-status" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="รอเริ่มงาน">รอเริ่มงาน</option>
+                            <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
+                            <option value="ส่งตรวจงาน">ส่งตรวจงาน</option>
+                            <option value="เสร็จสิ้น">เสร็จสิ้น</option>
+                            <option value="ล่าช้า">ล่าช้า</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-xs font-semibold text-slate-700 uppercase">ความคืบหน้า (%)</label>
+                            <span id="task-progress-val" class="text-xs font-bold text-blue-600">0%</span>
+                        </div>
+                        <input type="range" id="task-progress" min="0" max="100" value="0" step="5" class="w-full accent-blue-600 h-2 bg-slate-200 rounded-lg cursor-pointer" oninput="updateProgressDisplay(this.value)">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">หมายเหตุ / ปัญหาที่พบ</label>
+                    <textarea id="task-notes" rows="2" placeholder="ระบุรายละเอียดเพิ่มเติม เช่น รอส่งมอบพื้นที่ หรือรอสั่งซื้ออุปกรณ์..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <div class="pt-4 flex items-center justify-end space-x-3 border-t border-slate-200">
+                    <button type="button" onclick="closeTaskModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition shadow-md flex items-center space-x-1.5">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                        <span>บันทึกข้อมูล</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer class="mt-auto py-6 text-center text-xs text-slate-500 border-t border-slate-200">
+        <p>ElectroTrack Local DB - ระบบติดตามงานติดตั้งระบบไฟฟ้าแบบ IndexedDB ประจำเครื่อง &copy; 2026</p>
+    </footer>
+
+    <script>
+        // --- INDEXEDDB LOCAL DATABASE ENGINE ---
+        const DB_NAME = 'ElectroTrackLocalDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'electrical_tasks';
+
+        let db = null;
+        let tasks = [];
+        let deleteTargetId = null;
+
+        // Initialize IndexedDB Engine
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+                request.onupgradeneeded = (event) => {
+                    const dbInstance = event.target.result;
+                    if (!dbInstance.objectStoreNames.contains(STORE_NAME)) {
+                        dbInstance.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    resolve(db);
+                };
+
+                request.onerror = (event) => {
+                    console.error('IndexedDB Error:', event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        // Fetch All Tasks from IndexedDB
+        function getAllTasksFromDB() {
+            return new Promise((resolve, reject) => {
+                if (!db) return reject('DB not initialized');
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        // Save or Update Single Task in IndexedDB
+        function saveTaskToDB(task) {
+            return new Promise((resolve, reject) => {
+                if (!db) return reject('DB not initialized');
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.put(task);
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        // Delete Single Task from IndexedDB
+        function deleteTaskFromDB(id) {
+            return new Promise((resolve, reject) => {
+                if (!db) return reject('DB not initialized');
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.delete(id);
+
+                request.onsuccess = () => resolve();
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        // Clear All Tasks in IndexedDB Store
+        function clearAllTasksInDB() {
+            return new Promise((resolve, reject) => {
+                if (!db) return reject('DB not initialized');
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.clear();
+
+                request.onsuccess = () => resolve();
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        // --- APPLICATION LIFECYCLE ---
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await initDB();
+                await refreshData();
+            } catch (err) {
+                console.error('Failed to initialize app local database:', err);
+            }
+            lucide.createIcons();
+        });
+
+        // Refresh Data from IndexedDB and Update UI
+        async function refreshData() {
+            tasks = await getAllTasksFromDB();
+            populateDropdowns();
+            renderDashboard();
+            renderTasks();
+        }
+
+        // Populate Dropdowns for Filtering
+        function populateDropdowns() {
+            // Zone Filter
+            const zoneSelect = document.getElementById('filter-zone');
+            const currentZone = zoneSelect.value;
+            const zones = [...new Set(tasks.map(t => t.zone))].filter(Boolean).sort();
+
+            zoneSelect.innerHTML = '<option value="">ทุกโซน/ชั้น</option>';
+            zones.forEach(z => {
+                const opt = document.createElement('option');
+                opt.value = z;
+                opt.textContent = z;
+                if (z === currentZone) opt.selected = true;
+                zoneSelect.appendChild(opt);
+            });
+
+            // Foreman Filter
+            const foremanSelect = document.getElementById('filter-foreman');
+            const currentForeman = foremanSelect.value;
+            const foremen = [...new Set(tasks.map(t => t.foreman))].filter(Boolean).sort();
+
+            foremanSelect.innerHTML = '<option value="">ทุกหัวหน้าช่าง</option>';
+            foremen.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f;
+                opt.textContent = f;
+                if (f === currentForeman) opt.selected = true;
+                foremanSelect.appendChild(opt);
+            });
+
+            // Staff Filter
+            const staffSelect = document.getElementById('filter-staff');
+            const currentStaff = staffSelect.value;
+            const staffList = [...new Set(tasks.map(t => t.staff))].filter(Boolean).sort();
+
+            staffSelect.innerHTML = '<option value="">ทุก Staff ผู้ดูแล</option>';
+            staffList.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                if (s === currentStaff) opt.selected = true;
+                staffSelect.appendChild(opt);
+            });
+        }
+
+        // Render Dashboard KPI Cards & Overall Progress
+        function renderDashboard() {
+            const total = tasks.length;
+            const completed = tasks.filter(t => t.status === 'เสร็จสิ้น').length;
+            const inProgress = tasks.filter(t => t.status === 'กำลังดำเนินการ').length;
+            const pending = tasks.filter(t => t.status === 'รอเริ่มงาน' || t.status === 'ส่งตรวจงาน').length;
+            const delayed = tasks.filter(t => t.status === 'ล่าช้า').length;
+
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-completed').textContent = completed;
+            document.getElementById('stat-progress').textContent = inProgress;
+            document.getElementById('stat-pending').textContent = pending;
+            document.getElementById('stat-delayed').textContent = delayed;
+
+            // Overall Progress Calculation
+            let avgProgress = 0;
+            if (total > 0) {
+                const sumProg = tasks.reduce((acc, t) => acc + Number(t.progress || 0), 0);
+                avgProgress = Math.round(sumProg / total);
+            }
+
+            document.getElementById('overall-percentage-text').textContent = `${avgProgress}%`;
+            document.getElementById('overall-progress-bar').style.width = `${avgProgress}%`;
+        }
+
+        // Render Task Table with Filters & Search
+        function renderTasks() {
+            const searchVal = document.getElementById('search-input').value.toLowerCase();
+            const zoneVal = document.getElementById('filter-zone').value;
+            const categoryVal = document.getElementById('filter-category').value;
+            const foremanVal = document.getElementById('filter-foreman').value;
+            const staffVal = document.getElementById('filter-staff').value;
+            const statusVal = document.getElementById('filter-status').value;
+
+            const filtered = tasks.filter(task => {
+                const matchSearch = (task.name && task.name.toLowerCase().includes(searchVal)) || 
+                                    (task.foreman && task.foreman.toLowerCase().includes(searchVal)) ||
+                                    (task.staff && task.staff.toLowerCase().includes(searchVal)) ||
+                                    (task.zone && task.zone.toLowerCase().includes(searchVal)) ||
+                                    (task.notes && task.notes.toLowerCase().includes(searchVal));
+                const matchZone = zoneVal === '' || task.zone === zoneVal;
+                const matchCategory = categoryVal === '' || task.category === categoryVal;
+                const matchForeman = foremanVal === '' || task.foreman === foremanVal;
+                const matchStaff = staffVal === '' || task.staff === staffVal;
+                const matchStatus = statusVal === '' || task.status === statusVal;
+
+                return matchSearch && matchZone && matchCategory && matchForeman && matchStaff && matchStatus;
+            });
+
+            const tbody = document.getElementById('task-table-body');
+            const emptyState = document.getElementById('empty-state');
+            const countBadge = document.getElementById('task-count-badge');
+
+            tbody.innerHTML = '';
+            countBadge.textContent = `แสดง ${filtered.length} จากทั้งหมด ${tasks.length} รายการ`;
+
+            if (tasks.length === 0 || filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            if (tasks.length > 0 && filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-8 text-slate-400">
+                            ไม่พบรายการงานที่ตรงตามตัวกรอง
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            filtered.forEach(task => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition border-b border-slate-100';
+
+                let statusBadgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
+                if (task.status === 'เสร็จสิ้น') statusBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                else if (task.status === 'กำลังดำเนินการ') statusBadgeClass = 'bg-sky-50 text-sky-700 border-sky-200';
+                else if (task.status === 'ส่งตรวจงาน') statusBadgeClass = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+                else if (task.status === 'รอเริ่มงาน') statusBadgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+                else if (task.status === 'ล่าช้า') statusBadgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
+
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4">
+                        <div class="font-semibold text-slate-800">${escapeHtml(task.name)}</div>
+                        <div class="text-xs text-slate-500 mt-0.5 flex items-center space-x-1.5 flex-wrap gap-y-1">
+                            <span class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-medium">${escapeHtml(task.category)}</span>
+                            ${task.notes ? `<span class="text-slate-400 truncate max-w-xs" title="${escapeHtml(task.notes)}">💬 ${escapeHtml(task.notes)}</span>` : ''}
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-600 font-medium text-xs">
+                        <div class="flex items-center space-x-1">
+                            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>${escapeHtml(task.zone)}</span>
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4 text-xs">
+                        <div class="font-medium text-slate-800 flex items-center space-x-1">
+                            <i data-lucide="user" class="w-3.5 h-3.5 text-indigo-500"></i>
+                            <span>ช่าง: ${escapeHtml(task.foreman || '-')}</span>
+                        </div>
+                        <div class="text-slate-500 mt-0.5 flex items-center space-x-1">
+                            <i data-lucide="users" class="w-3 h-3 text-slate-400"></i>
+                            <span>คนงาน: <strong class="text-slate-700">${task.workerCount || 0} คน</strong></span>
+                        </div>
+                        <div class="text-blue-600 mt-0.5 flex items-center space-x-1">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-blue-500"></i>
+                            <span>Staff: <strong class="text-slate-700">${escapeHtml(task.staff || '-')}</strong></span>
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-20 sm:w-24 bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
+                                <div class="bg-blue-600 h-full rounded-full transition-all" style="width: ${task.progress}%"></div>
+                            </div>
+                            <span class="text-xs font-semibold text-slate-700 w-8">${task.progress}%</span>
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusBadgeClass}">
+                            ${escapeHtml(task.status)}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-500 text-xs">${formatDate(task.dueDate)}</td>
+                    <td class="py-3.5 px-4 text-right space-x-1">
+                        <button onclick="openEditTaskModal('${task.id}')" title="แก้ไข" class="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition">
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="promptDeleteTask('${task.id}')" title="ลบ" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            lucide.createIcons();
+        }
+
+        // Trigger filters
+        function filterTasks() {
+            renderTasks();
+        }
+
+        // Clear filter inputs
+        function clearFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('filter-zone').value = '';
+            document.getElementById('filter-category').value = '';
+            document.getElementById('filter-foreman').value = '';
+            document.getElementById('filter-staff').value = '';
+            document.getElementById('filter-status').value = '';
+            renderTasks();
+        }
+
+        // Update slider value visual
+        function updateProgressDisplay(val) {
+            document.getElementById('task-progress-val').textContent = `${val}%`;
+            const statusSelect = document.getElementById('task-status');
+            const numVal = Number(val);
+            if (numVal === 100) {
+                statusSelect.value = 'เสร็จสิ้น';
+            } else if (numVal > 0 && statusSelect.value === 'รอเริ่มงาน') {
+                statusSelect.value = 'กำลังดำเนินการ';
+            }
+        }
+
+        // Modal Handlers
+        function openAddTaskModal() {
+            document.getElementById('modal-title').textContent = 'เพิ่มรายการงานติดตั้งใหม่';
+            document.getElementById('task-id').value = '';
+            document.getElementById('task-form').reset();
+            document.getElementById('task-workers').value = 3;
+            document.getElementById('task-progress').value = 0;
+            updateProgressDisplay(0);
+            document.getElementById('task-modal').classList.remove('hidden');
+        }
+
+        function openEditTaskModal(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+
+            document.getElementById('modal-title').textContent = 'แก้ไขรายการงานติดตั้ง';
+            document.getElementById('task-id').value = task.id;
+            document.getElementById('task-name').value = task.name || '';
+            document.getElementById('task-category').value = task.category || 'MDB & Main Distribution';
+            document.getElementById('task-zone').value = task.zone || '';
+            document.getElementById('task-foreman').value = task.foreman || '';
+            document.getElementById('task-workers').value = task.workerCount || 1;
+            document.getElementById('task-staff').value = task.staff || '';
+            document.getElementById('task-startdate').value = task.startDate || '';
+            document.getElementById('task-duedate').value = task.dueDate || '';
+            document.getElementById('task-status').value = task.status || 'รอเริ่มงาน';
+            document.getElementById('task-progress').value = task.progress || 0;
+            updateProgressDisplay(task.progress || 0);
+            document.getElementById('task-notes').value = task.notes || '';
+
+            document.getElementById('task-modal').classList.remove('hidden');
+        }
+
+        function closeTaskModal() {
+            document.getElementById('task-modal').classList.add('hidden');
+        }
+
+        // Form Submission to IndexedDB
+        async function handleTaskSubmit(event) {
+            event.preventDefault();
+
+            const id = document.getElementById('task-id').value || 'task-' + Date.now();
+            const taskData = {
+                id,
+                name: document.getElementById('task-name').value.trim(),
+                category: document.getElementById('task-category').value,
+                zone: document.getElementById('task-zone').value.trim(),
+                foreman: document.getElementById('task-foreman').value.trim(),
+                workerCount: Number(document.getElementById('task-workers').value) || 1,
+                staff: document.getElementById('task-staff').value.trim(),
+                startDate: document.getElementById('task-startdate').value,
+                dueDate: document.getElementById('task-duedate').value,
+                status: document.getElementById('task-status').value,
+                progress: Number(document.getElementById('task-progress').value) || 0,
+                notes: document.getElementById('task-notes').value.trim(),
+                updatedAt: new Date().toISOString()
+            };
+
+            try {
+                await saveTaskToDB(taskData);
+                await refreshData();
+                closeTaskModal();
+                showToast('บันทึกข้อมูลลงฐานข้อมูลในเครื่องสำเร็จ', 'success');
+            } catch (err) {
+                console.error('Failed to save task:', err);
+                showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'info');
+            }
+        }
+
+        // Delete Confirmations
+        function promptDeleteTask(id) {
+            deleteTargetId = id;
+            document.getElementById('delete-modal').classList.remove('hidden');
+            document.getElementById('confirm-delete-btn').onclick = async function() {
+                try {
+                    await deleteTaskFromDB(deleteTargetId);
+                    await refreshData();
+                    closeDeleteModal();
+                    showToast('ลบรายการงานเรียบร้อยแล้ว', 'info');
+                } catch (err) {
+                    console.error('Failed to delete task:', err);
+                }
+            };
+        }
+
+        function closeDeleteModal() {
+            deleteTargetId = null;
+            document.getElementById('delete-modal').classList.add('hidden');
+        }
+
+        // --- Data Backup & Restore Features (JSON Export & Import) ---
+        function exportJSONData() {
+            if (tasks.length === 0) {
+                showToast('ไม่มีข้อมูลที่จะส่งออก ( Empty Database )', 'info');
+                return;
+            }
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks, null, 2));
+            const downloadAnchor = document.createElement('a');
+            const fileName = `electro_track_backup_${new Date().toISOString().slice(0, 10)}.json`;
+            
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", fileName);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+
+            showToast('ส่งออกไฟล์ JSON เรียบร้อยแล้ว', 'success');
+        }
+
+        function importJSONData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const importedTasks = JSON.parse(e.target.result);
+                    if (Array.isArray(importedTasks)) {
+                        await clearAllTasksInDB();
+                        for (const task of importedTasks) {
+                            if (task.id && task.name) {
+                                await saveTaskToDB(task);
+                            }
+                        }
+                        await refreshData();
+                        showToast(`นำเข้าข้อมูลสำเร็จ ${importedTasks.length} รายการ`, 'success');
+                    } else {
+                        showToast('รูปแบบไฟล์ JSON ไม่ถูกต้อง', 'info');
+                    }
+                } catch (err) {
+                    console.error('JSON Import error:', err);
+                    showToast('ไม่สามารถอ่านไฟล์ JSON ได้', 'info');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset input
+        }
+
+        // Toast Helper
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const messageEl = document.getElementById('toast-message');
+            const iconEl = document.getElementById('toast-icon');
+
+            messageEl.textContent = message;
+
+            if (type === 'success') {
+                iconEl.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>';
+            } else {
+                iconEl.innerHTML = '<i data-lucide="info" class="w-5 h-5 text-sky-400"></i>';
+            }
+            lucide.createIcons();
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Helper: Escape HTML
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;")
+                      .replace(/</g, "&lt;")
+                      .replace(/>/g, "&gt;")
+                      .replace(/"/g, "&quot;")
+                      .replace(/'/g, "&#039;");
+        }
+
+        // Helper: Thai Date Formatter
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            const year = Number(parts[0]) + 543;
+            const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+            const month = months[parseInt(parts[1], 10) - 1];
+            const day = parseInt(parts[2], 10);
+            return `${day} ${month} ${year}`;
+        }
+    </script>
+    <script type="module">
+    // นำเข้า Firebase SDK จาก CDN
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // 1. ค่าคอนฟิกของคุณ (นำมาจาก Firebase Console)
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    // เริ่มต้นใช้งาน Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const form = document.getElementById('dataForm');
+    const displayArea = document.getElementById('displayArea');
+
+    // 2. เมื่อกดปุ่มส่งฟอร์ม ให้บันทึกข้อมูลลง Firestore
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('nameInput').value;
+        const message = document.getElementById('messageInput').value;
+
+        try {
+            await addDoc(collection(db, "messages"), {
+                name: name,
+                message: message,
+                createdAt: new Date()
+            });
+            form.reset(); // ล้างค่าในฟอร์มหลังส่งเสร็จ
+        } catch (error) {
+            console.error("Error adding document: ", error);
+        }
+    });
+
+    // 3. ดึงข้อมูลและแสดงผลแบบเรียลไทม์ (Real-time updates)
+    const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
+    onSnapshot(q, (snapshot) => {
+        let html = "";
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            html += `<div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+                        <strong>${data.name}</strong>: <p>${data.message}</p>
+                     </div>`;
+        });
+        displayArea.innerHTML = html || "ยังไม่มีข้อมูล";
+    });
+</script>
+</body>
+</html>
